@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Notenrechner</title>
+  <meta name="theme-color" content="#2563eb">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/app-192.png" sizes="192x192">
+  <style>
+    :root{
+      --fg:#0f172a;
+      --muted:#475569;
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --accent:#2563eb;
+      --accent-2:#0ea5e9;
+      --ring: rgba(37,99,235,.15);
+      --border:#e2e8f0;
+      --shadow: 0 10px 30px rgba(2,10,22,.08);
+    }
+    [data-theme="dark"]{
+      --fg:#e5e7eb;
+      --muted:#94a3b8;
+      --bg:#0b1220;
+      --card:#111827;
+      --accent:#3b82f6;
+      --accent-2:#06b6d4;
+      --ring: rgba(59,130,246,.25);
+      --border:#1f2937;
+      --shadow: 0 10px 30px rgba(0,0,0,.4);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial; color:var(--fg); background:var(--bg); height:100%; }
+    .gradient {
+      background: linear-gradient(135deg, rgba(37,99,235,.12), rgba(14,165,233,.12));
+      border-bottom: 1px solid var(--border);
+    }
+    header { padding: 1.2rem 1rem; max-width: 1024px; margin: 0 auto; }
+    h1 { font-size: clamp(1.3rem, 3vw, 1.7rem); margin: 0 0 .3rem; letter-spacing:.2px; }
+    p.lead { margin: 0; color: var(--muted); max-width: 75ch; }
+    .topbar { display:flex; align-items:center; justify-content: space-between; gap: .75rem; }
+    .tbtn {
+      cursor:pointer; border:1px solid var(--border); background:transparent; color:var(--fg);
+      padding:.5rem .75rem; border-radius: 999px; font-weight:600; box-shadow: var(--shadow);
+    }
+    .container { padding: 1rem; max-width: 1024px; margin: 0 auto; }
+    .card {
+      background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 1rem; border:1px solid var(--border);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .row { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+    @media (min-width: 860px) { .row { grid-template-columns: 1fr 1fr; } }
+    label { font-weight: 700; font-size: .95rem; letter-spacing:.2px; }
+    input[type="number"], input[type="text"] {
+      width: 100%; padding: .85rem 1rem; border-radius: 14px; border: 1px solid var(--border); outline: none;
+      background: transparent; color: var(--fg); font-size:1rem;
+    }
+    input[type="number"]:focus, input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); }
+    .actions { display:flex; gap:.6rem; flex-wrap: wrap; margin-top:.35rem;}
+    button {
+      cursor: pointer; border: 1px solid transparent; background: var(--accent); color: white;
+      padding: .8rem 1rem; border-radius: 14px; font-weight: 700; letter-spacing:.2px;
+      box-shadow: var(--shadow);
+    }
+    button.ghost { background: transparent; color: var(--accent); border: 1px solid rgba(37,99,235,.35); }
+    table { width: 100%; border-collapse: collapse; border-radius: 14px; overflow: hidden; }
+    th, td { padding: .7rem .8rem; text-align: left; }
+    thead th {
+      font-size: .9rem; color: var(--muted);
+      position: sticky; top: 0; background: var(--card); border-bottom: 1px solid var(--border); z-index:1;
+    }
+    tbody tr:nth-child(odd) td { background: color-mix(in oklab, var(--card), var(--bg) 6%); }
+    tbody td { border-bottom: 1px dashed var(--border); }
+    .mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .badge { display:inline-block; padding:.25rem .55rem; border-radius:999px; font-weight:800; font-size:.95rem; color:white; box-shadow: var(--shadow); }
+    .g1{background:#16a34a;} .g2{background:#22c55e;} .g3{background:#84cc16;} .g4{background:#eab308;} .g5{background:#f97316;} .g6{background:#ef4444;}
+    .hint { font-size: .92rem; color: var(--muted); }
+    .result { margin-top: .6rem; font-weight: 800; font-size: 1rem; }
+    .legend { display:flex; flex-wrap:wrap; gap:.4rem .6rem; margin-top:.6rem; }
+    .chip { display:flex; align-items:center; gap:.4rem; border:1px solid var(--border); padding:.25rem .55rem; border-radius:999px; font-size:.88rem; color:var(--muted); background:transparent; }
+    .dot { width:.75rem; height:.75rem; border-radius:50%; }
+    footer { padding:1rem; text-align:center; color:var(--muted); font-size:.9rem; }
+  </style>
+</head>
+<body>
+  <div class="gradient">
+    <header>
+      <div class="topbar">
+        <div>
+          <h1>Notenrechner</h1>
+          <p class="lead">Punktbereiche pro Note (1–6) inkl. Rundungsregel (≥ 91,5 % aufrunden; keine Aufrundung über 49,5 % → 50 %).</p>
+        </div>
+        <div>
+          <button id="themeBtn" class="tbtn" title="Hell/Dunkel umschalten">🌗 Theme</button>
+        </div>
+      </div>
+    </header>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <div class="row">
+        <div>
+          <label for="maxPoints">Maximale Punktzahl (ganze Punkte)</label>
+          <input id="maxPoints" type="number" step="1" min="1" value="40" />
+          <div class="actions">
+            <button id="calcBtn">Berechnen</button>
+            <button id="exportBtn" class="ghost">CSV exportieren</button>
+          </div>
+          <div class="legend" aria-hidden="true">
+            <span class="chip"><span class="dot" style="background:#16a34a"></span>1: 92–100 %</span>
+            <span class="chip"><span class="dot" style="background:#22c55e"></span>2: 80–91 %</span>
+            <span class="chip"><span class="dot" style="background:#84cc16"></span>3: 65–79 %</span>
+            <span class="chip"><span class="dot" style="background:#eab308"></span>4: 50–64 %</span>
+            <span class="chip"><span class="dot" style="background:#f97316"></span>5: 25–49 %</span>
+            <span class="chip"><span class="dot" style="background:#ef4444"></span>6: 0–24 %</span>
+          </div>
+        </div>
+        <div>
+          <label for="studentPoints">Einzelprüfung: Punkte → Note (halbe Punkte möglich)</label>
+          <input id="studentPoints" type="text" value="20" inputmode="decimal" placeholder="z. B. 18,5" />
+          <div class="result" id="studentResult" aria-live="polite"></div>
+          <p class="hint">Komma oder Punkt für Dezimalwerte möglich. Einrasten auf .0/.5 bei Enter oder Verlassen des Feldes.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem;">
+      <table>
+        <thead>
+          <tr>
+            <th>Note</th>
+            <th>Prozentbereich</th>
+            <th>Punktbereich (bei <span id="labelMax" class="mono">40</span> max)</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <footer>© Notenrechner – offlinefähig</footer>
+
+<script>
+  // Theme persistence
+  const root = document.documentElement;
+  const savedTheme = (localStorage.getItem("noten-theme")||"");
+  if (savedTheme) root.setAttribute("data-theme", savedTheme);
+  document.getElementById("themeBtn").addEventListener("click", () => {
+    const current = root.getAttribute("data-theme");
+    const next = current === "dark" ? "" : "dark";
+    if (next) root.setAttribute("data-theme", next); else root.removeAttribute("data-theme");
+    localStorage.setItem("noten-theme", next);
+  });
+
+  // Service worker registration
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js");
+    });
+  }
+
+  const boundaries = [
+    { grade: 1, min: 92, max: 100, cls: "g1" },
+    { grade: 2, min: 80, max: 91, cls: "g2" },
+    { grade: 3, min: 65, max: 79, cls: "g3" },
+    { grade: 4, min: 50, max: 64, cls: "g4" },
+    { grade: 5, min: 25, max: 49, cls: "g5" },
+    { grade: 6, min: 0,  max: 24, cls: "g6" },
+  ];
+
+  function gradeFromPercentage(pct) {
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    const roundedHalf = Math.round(pct * 2) / 2;
+    let effective = (pct < 50 && roundedHalf >= 50) ? 49.9999 : roundedHalf;
+    if (effective >= 92) return 1;
+    if (effective >= 80) return 2;
+    if (effective >= 65) return 3;
+    if (effective >= 50) return 4;
+    if (effective >= 25) return 5;
+    return 6;
+  }
+
+  function computeRanges(maxPoints) {
+    const ranges = new Map();
+    for (let g = 1; g <= 6; g++) ranges.set(g, { min: null, max: null });
+    for (let p = 0; p <= maxPoints; p++) {
+      const pct = (p / maxPoints) * 100;
+      const grade = gradeFromPercentage(pct);
+      const r = ranges.get(grade);
+      if (r.min === null) r.min = p;
+      r.max = p;
+    }
+    return ranges;
+  }
+
+  function render(maxPoints) {
+    document.getElementById("labelMax").textContent = String(maxPoints);
+    const tbody = document.getElementById("tbody");
+    tbody.innerHTML = "";
+    const ranges = computeRanges(maxPoints);
+    for (const b of boundaries) {
+      const r = ranges.get(b.grade);
+      const pr = r.min === null ? "—" : `${r.min} – ${r.max}`;
+      const percentLabel = `${b.min}–${b.max}%` + (b.grade === 1 ? " (≥91,5% → 1)" : (b.grade === 4 ? " (keine Aufrundung von 49,5% → 50%)" : ""));
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><span class="badge ${b.cls}">${b.grade}</span></td>
+        <td class="mono">${percentLabel}</td>
+        <td class="mono">${pr}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  function parseNumberLocaleAware(text) {
+    if (!text) return NaN;
+    text = text.trim().replace(/\s+/g, '');
+    text = text.replace(',', '.');
+    return parseFloat(text);
+  }
+
+  function snapHalf(x) { return Math.round(x * 2) / 2; }
+
+  function explainSingle(maxPoints, points) {
+    if (!Number.isFinite(points)) {
+      document.getElementById("studentResult").textContent = "";
+      return;
+    }
+    const clamped = Math.min(maxPoints, Math.max(0, points));
+    const pct = (clamped / maxPoints) * 100;
+    const grade = gradeFromPercentage(pct);
+    const ptsLabel = Number.isInteger(clamped) ? String(clamped) : clamped.toFixed(1);
+    document.getElementById("studentResult").textContent = `Punkte: ${ptsLabel} / ${maxPoints}  →  ${pct.toFixed(2)} %  →  Note ${grade}`;
+  }
+
+  function exportCSV(maxPoints) {
+    const ranges = computeRanges(maxPoints);
+    const rows = [["Note","Prozentbereich","Punktbereich"]];
+    for (const b of boundaries) {
+      const r = ranges.get(b.grade);
+      const pr = r.min === null ? "" : `${r.min}–${r.max}`;
+      rows.push([String(b.grade), `${b.min}-${b.max}%`, pr]);
+    }
+    const csv = rows.map(r => r.map(x => `"${String(x).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `notenbereiche_${maxPoints}P.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  const maxInput = document.getElementById("maxPoints");
+  const calcBtn = document.getElementById("calcBtn");
+  const studentInput = document.getElementById("studentPoints");
+  const exportBtn = document.getElementById("exportBtn");
+
+  function doCalc() {
+    const max = Math.max(1, Math.floor(Number(maxInput.value) || 0));
+    maxInput.value = String(max);
+    render(max);
+    previewExplain();
+  }
+
+  function previewExplain() {
+    const max = Math.max(1, Math.floor(Number(maxInput.value) || 0));
+    const raw = studentInput.value;
+    if (/[,\.]$/.test(raw)) return;
+    const num = parseNumberLocaleAware(raw);
+    if (!Number.isFinite(num)) return;
+    explainSingle(max, snapHalf(num));
+  }
+
+  function finalizeInput() {
+    const max = Math.max(1, Math.floor(Number(maxInput.value) || 0));
+    const raw = studentInput.value;
+    const num = parseNumberLocaleAware(raw);
+    if (!Number.isFinite(num)) {
+      studentInput.value = "";
+      document.getElementById("studentResult").textContent = "";
+      return;
+    }
+    let pts = snapHalf(num);
+    pts = Math.min(max, Math.max(0, pts));
+    const s = Number.isInteger(pts) ? String(pts) : pts.toString().replace(".", ",");
+    studentInput.value = s;
+    explainSingle(max, pts);
+  }
+
+  maxInput.addEventListener("change", doCalc);
+  calcBtn.addEventListener("click", doCalc);
+  studentInput.addEventListener("input", previewExplain);
+  studentInput.addEventListener("blur", finalizeInput);
+  studentInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); finalizeInput(); } });
+  exportBtn.addEventListener("click", () => {
+    const max = Math.max(1, Math.floor(Number(maxInput.value) || 0));
+    exportCSV(max);
+  });
+
+  // Initial paint
+  doCalc();
+</script>
+</body>
+</html>
